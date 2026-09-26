@@ -1,0 +1,4 @@
+{
+    "threshold": 0.08807366276511115,
+    "method": "95th_percentile_validation_reconstruction_error"
+}

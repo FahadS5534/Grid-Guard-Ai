@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ESP32 IoT Prototype Wiring & Architecture</title>
+  <style>
+    body {
+      background-color: #070A10;
+      color: #F8FAFC;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 90vh;
+    }
+    .container {
+      width: 1000px;
+      background: #0F172A;
+      border: 1px solid #1E293B;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+      color: #00F0FF;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94A3B8;
+      font-size: 13px;
+      margin-bottom: 40px;
+    }
+    .diagram-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 280px;
+      gap: 30px;
+      align-items: center;
+    }
+    .card {
+      background: #1E293B;
+      border-radius: 12px;
+      padding: 16px;
+      border-left: 4px solid #38BDF8;
+      margin-bottom: 16px;
+    }
+    .card.temp { border-color: #EF4444; }
+    .card.hum { border-color: #C084FC; }
+    .card.vib { border-color: #22D3EE; }
+    .card.curr { border-color: #F59E0B; }
+    .card.volt { border-color: #10B981; }
+    
+    .card h3 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      color: #FFFFFF;
+    }
+    .card p {
+      margin: 0;
+      font-size: 11px;
+      color: #94A3B8;
+    }
+    .esp32-box {
+      background: #0B0F17;
+      border: 2px solid #00F0FF;
+      box-shadow: 0 0 30px rgba(0,240,255,0.15);
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .esp32-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #00F0FF;
+      margin-bottom: 8px;
+    }
+    .esp32-sub {
+      font-size: 12px;
+      color: #64748B;
+      margin-bottom: 24px;
+    }
+    .wifi-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid #10B981;
+      color: #34D399;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .flow-arrow {
+      margin-top: 32px;
+      padding: 16px;
+      background: #064E3B;
+      border: 1px solid #10B981;
+      border-radius: 12px;
+      text-align: center;
+      color: #A7F3D0;
+      font-size: 13px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GridGuard AI — ESP32 IoT Prototype Architecture</h1>
+    <div class="subtitle">Microcontroller Sensor Acquisition & Ingestion Blueprint</div>
+    
+    <div class="diagram-grid">
+      <!-- Left Sensors -->
+      <div>
+        <div class="card temp">
+          <h3>DS18B20 Sensor</h3>
+          <p>Transformer Oil / Case Temp (°C)</p>
+          <p style="color: #EF4444; font-weight: 600; margin-top: 4px;">GPIO 4 (OneWire)</p>
+        </div>
+        <div class="card hum">
+          <h3>DHT22 Sensor</h3>
+          <p>Ambient Humidity & Temp</p>
+          <p style="color: #C084FC; font-weight: 600; margin-top: 4px;">GPIO 15 (Digital)</p>
+        </div>
+        <div class="card vib">
+          <h3>SW-420 Sensor</h3>
+          <p>Transformer Mechanical Vibration</p>
+          <p style="color: #22D3EE; font-weight: 600; margin-top: 4px;">GPIO 14 (Digital Interrupt)</p>
+        </div>
+      </div>
+
+      <!-- Center ESP32 -->
+      <div class="esp32-box">
+        <div class="esp32-title">ESP32 NodeMCU</div>
+        <div class="esp32-sub">Dual-Core 240MHz Wi-Fi Microcontroller</div>
+        <div style="margin: 20px 0;">
+          <span class="wifi-badge">Wi-Fi 802.11 b/g/n Connected</span>
+        </div>
+        <div style="font-size: 11px; color: #94A3B8; line-height: 1.6;">
+          Payload Assembly & HTTP JSON Post<br>
+          Sampling Interval: 15-Minute Epoch Sync
+        </div>
+      </div>
+
+      <!-- Right Sensors -->
+      <div>
+        <div class="card curr">
+          <h3>ACS712 Sensor</h3>
+          <p>Load Current (Amperes)</p>
+          <p style="color: #F59E0B; font-weight: 600; margin-top: 4px;">ADC GPIO 34 (Analog Input)</p>
+        </div>
+        <div class="card volt">
+          <h3>Voltage Sensor</h3>
+          <p>Grid Voltage (Volts AC)</p>
+          <p style="color: #10B981; font-weight: 600; margin-top: 4px;">ADC GPIO 35 (Analog Input)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">
+      Wi-Fi HTTP POST &rarr; <code>POST /api/v1/telemetry</code> &rarr; FastAPI Backend Ingestion Engine
+    </div>
+  </div>
+</body>
+</html>

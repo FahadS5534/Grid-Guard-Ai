@@ -1,0 +1,32 @@
+{
+    "project_name": "GridGuard AI Predictive Maintenance",
+    "source_dataset": "transformer_3feature_cleaned.csv",
+    "raw_reference_dataset": "transformer_3feature_dataset.csv",
+    "split_method": "month-stratified blocked temporal holdout",
+    "ai_features": [
+        "temperature_deviation",
+        "current",
+        "voltage"
+    ],
+    "iot_monitoring_features": [
+        "temperature",
+        "humidity",
+        "vibration",
+        "current",
+        "voltage"
+    ],
+    "window_size": 96,
+    "sampling_interval": "15 minutes",
+    "window_duration": "24 hours",
+    "architecture": "LSTM Autoencoder",
+    "optimizer": "Adam",
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "maximum_epochs": 100,
+    "actual_epochs": 100,
+    "best_epoch": 100,
+    "best_validation_loss": 0.08250422775745392,
+    "threshold_method": "95th percentile of normal validation reconstruction error",
+    "threshold": 0.24316641199165895,
+    "extreme_voltage_definition": "voltage < 180V"
+}

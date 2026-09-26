@@ -1,0 +1,27 @@
+{
+    "model_type": "Autoencoder",
+    "dataset": "ETTm1",
+    "window_size": 96,
+    "features": [
+        "HUFL",
+        "HULL",
+        "MUFL",
+        "MULL",
+        "LUFL",
+        "LULL",
+        "OT"
+    ],
+    "threshold_method": "95th percentile of validation reconstruction error",
+    "anomaly_score_method": "validation-error z-score normalized to 0-1",
+    "health_score_method": "100 * (1 - anomaly_score)",
+    "risk_thresholds": {
+        "low": "<0.20",
+        "medium": "0.20-0.39",
+        "high": "0.40-0.69",
+        "critical": ">=0.70"
+    },
+    "anomaly_score_is_failure_probability": false,
+    "training_samples": 48709,
+    "validation_samples": 10437,
+    "test_samples": 10439
+}

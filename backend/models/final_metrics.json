@@ -1,0 +1,89 @@
+{
+    "source_dataset": "transformer_3feature_cleaned.csv",
+    "raw_reference_dataset": "transformer_3feature_dataset.csv",
+    "row_count": 18283,
+    "timestamp_start": "2019-06-27 09:45:00",
+    "timestamp_end": "2020-04-14 00:30:00",
+    "split_method": "month-stratified blocked temporal holdout",
+    "eligible_months": [
+        1,
+        2,
+        3,
+        4,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+    ],
+    "non_eligible_months": [
+        6
+    ],
+    "validation_months": [
+        1,
+        3,
+        7,
+        9,
+        11
+    ],
+    "test_months": [
+        2,
+        4,
+        8,
+        10,
+        12
+    ],
+    "train_row_count": 14643,
+    "validation_row_count": 1756,
+    "test_row_count": 1884,
+    "total_windows": 14156,
+    "train_windows_before_extreme_filtering": 11958,
+    "normal_train_windows": 11836,
+    "validation_windows": 1032,
+    "test_windows": 1166,
+    "extreme_voltage_observation_count": 13,
+    "excluded_train_windows": 122,
+    "validation_extreme_voltage_windows": 0,
+    "test_extreme_voltage_windows": 0,
+    "best_epoch": 100,
+    "best_training_loss": 0.06667415052652359,
+    "best_validation_loss": 0.08250422775745392,
+    "actual_epochs": 100,
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "window_size": 96,
+    "feature_count": 3,
+    "normal_validation_count": 1032,
+    "normal_validation_mean": 0.0825042390393694,
+    "normal_validation_std": 0.06098306312322803,
+    "normal_validation_95th": 0.24316641199165895,
+    "normal_validation_99th": 0.27613244703446055,
+    "threshold": 0.24316641199165895,
+    "test_mean_error": 0.08308444429543263,
+    "test_median_error": 0.0725741086393086,
+    "test_std_error": 0.0414599390000522,
+    "test_min_error": 0.03604419274198347,
+    "test_max_error": 0.28958428455410173,
+    "test_95th_percentile": 0.1475868836703873,
+    "test_99th_percentile": 0.2724613122148842,
+    "test_anomaly_count": 21,
+    "test_anomaly_rate": 0.018010291595197257,
+    "risk_distribution": {
+        "LOW": 1097,
+        "MEDIUM": 33,
+        "HIGH": 36,
+        "CRITICAL": 0
+    },
+    "feature_dominance": {
+        "temperature_deviation": 334,
+        "current": 781,
+        "voltage": 51
+    },
+    "limitations": [
+        "No ground-truth transformer fault labels",
+        "Anomaly rate is not failure rate",
+        "Anomaly score is not failure probability",
+        "Seasonal baseline is derived from TRAIN data only"
+    ]
+}

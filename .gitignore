@@ -1,0 +1,32 @@
+# Python / Virtual Environment
+venv/
+backend/venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+
+# Node.js / React
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+frontend/dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

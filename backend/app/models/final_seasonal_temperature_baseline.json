@@ -1,0 +1,50 @@
+{
+    "monthly_train_medians": {
+        "1": 19.0,
+        "2": 21.0,
+        "3": 27.0,
+        "4": 29.0,
+        "6": 33.43939393939394,
+        "7": 29.0,
+        "8": 29.0,
+        "9": 29.0,
+        "10": 27.0,
+        "11": 25.0,
+        "12": 22.0
+    },
+    "valid_train_counts": {
+        "1": 1104,
+        "2": 1628,
+        "3": 1124,
+        "4": 988,
+        "6": 96,
+        "7": 1276,
+        "8": 2032,
+        "9": 1710,
+        "10": 2025,
+        "11": 1792,
+        "12": 860
+    },
+    "supported_months": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+    ],
+    "unsupported_months": [],
+    "overall_train_temperature_median": 27.0,
+    "fallback_rule": "Use overall train temperature median if valid train observations count < 96",
+    "method_description": "Median training temperature calculated on TRAIN split only per calendar month",
+    "training_observation_boundaries": {
+        "start": "2019-06-27 09:45:00",
+        "end": "2020-04-11 10:45:00"
+    },
+    "feature_definition": "temperature_deviation = temperature - expected_temperature"
+}
