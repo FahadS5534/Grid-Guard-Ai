@@ -109,8 +109,36 @@ def inject_simulated_telemetry(payload: SimulationInjectPayload, db: Session = D
         db.refresh(tx)
 
     ts = payload.timestamp or datetime.utcnow()
+    import random
 
-    # Save Sensor Reading marked as simulated
+    # Fetch existing readings for this transformer
+    existing_count = db.query(SensorReading).filter(SensorReading.transformer_id == tx.id).count()
+
+    # If count < 96, synthesize a complete 96-observation sequence (24 hours at 15-min intervals) anchored around user's values
+    if existing_count < 96:
+        start_time = ts - timedelta(hours=24)
+        for i in range(96 - existing_count):
+            step_time = start_time + timedelta(minutes=15 * i)
+            noise_t = random.uniform(-0.8, 0.8)
+            noise_c = random.uniform(-2.0, 2.0)
+            noise_v = random.uniform(-1.0, 1.0)
+            
+            synth_reading = SensorReading(
+                transformer_id=tx.id,
+                timestamp=step_time,
+                temperature=round(payload.temperature + noise_t, 1),
+                ambient_temperature=32.7,
+                humidity=round(max(0.0, min(100.0, payload.humidity + random.uniform(-1.0, 1.0))), 1),
+                vibration=round(max(0.0, payload.vibration + random.uniform(-0.05, 0.05)), 2),
+                current=round(max(0.0, payload.current + noise_c), 1),
+                voltage=round(max(0.0, payload.voltage + noise_v), 1),
+                load=round(max(0.0, payload.current + noise_c), 1),
+                power_factor=0.95
+            )
+            db.add(synth_reading)
+        db.commit()
+
+    # Save the explicitly injected reading as the latest reading
     reading = SensorReading(
         transformer_id=tx.id,
         timestamp=ts,
@@ -150,40 +178,19 @@ def inject_simulated_telemetry(payload: SimulationInjectPayload, db: Session = D
     is_complete_sequence = (obs_count >= 96)
     missing_count = max(0, 96 - obs_count)
 
-    if not is_complete_sequence:
-        notice = f"Collecting observations: {obs_count}/96. {missing_count} more observations required to perform 24-hour LSTM Autoencoder inference."
-        ml_result = {
-            "status": "COLLECTING_OBSERVATIONS",
-            "is_complete_sequence": False,
-            "observation_count": obs_count,
-            "required_count": 96,
-            "missing_count": missing_count,
-            "notice": notice,
-            "explanation": f"AI inference requires 96 observations (24 hours at 15-minute intervals). Currently available: {obs_count}/96 observations ({missing_count} remaining)."
-        }
-        maint_eval = {
-            "risk_category": "COLLECTING",
-            "risk_level": "Collecting Observations",
-            "risk_score": 0,
-            "recommended_actions": [f"Continue telemetry collection until 96 observations (24 hours) are reached. Currently available: {obs_count}/96."],
-            "reasons": [f"Sequence accumulation in progress ({obs_count}/96). {missing_count} observations remaining for 24-hour LSTM Autoencoder inference."],
-            "suggested_timeframe": "In Progress",
-            "disclaimer": "AI inference requires 96 consecutive observations before evaluating overall sequence reconstruction error."
-        }
-    else:
-        ml_service = get_ml_service()
-        ml_result = ml_service.predict_sequence(obs_list, current_time=ts)
-        ml_result["is_complete_sequence"] = True
-        notice = "24-Hour (96-observation) sequence complete. AI inference evaluated successfully."
-        maint_eval = MaintenanceRecommendationService.evaluate(
-            sensor_data={"temperature": payload.temperature, "vibration": payload.vibration, "current": payload.current, "voltage": payload.voltage},
-            thermal_stress=0.65 if payload.temperature > 65 else 0.25,
-            is_anomaly=ml_result["is_anomaly"],
-            health_score=ml_result["health_score"],
-            reconstruction_error=ml_result["reconstruction_error"],
-            threshold=ml_result["threshold"],
-            dominant_signal=ml_result["dominant_signal"]
-        )
+    ml_service = get_ml_service()
+    ml_result = ml_service.predict_sequence(obs_list, current_time=ts)
+    ml_result["is_complete_sequence"] = True
+    notice = "24-Hour (96-observation) sequence generated from 1 set of parameters. AI inference evaluated successfully."
+    maint_eval = MaintenanceRecommendationService.evaluate(
+        sensor_data={"temperature": payload.temperature, "vibration": payload.vibration, "current": payload.current, "voltage": payload.voltage},
+        thermal_stress=0.65 if payload.temperature > 65 else 0.25,
+        is_anomaly=ml_result["is_anomaly"],
+        health_score=ml_result["health_score"],
+        reconstruction_error=ml_result["reconstruction_error"],
+        threshold=ml_result["threshold"],
+        dominant_signal=ml_result["dominant_signal"]
+    )
 
     return {
         "status": "success",
