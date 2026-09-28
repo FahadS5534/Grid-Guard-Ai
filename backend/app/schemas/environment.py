@@ -24,12 +24,16 @@ class EnvironmentReadingResponse(EnvironmentReadingBase):
         from_attributes = True
 
 class EnvironmentSummary(BaseModel):
-    status: str = "Active"
-    intensity: str = "Moderate to Strong El Niño conditions observed."
+    status: str = "Active El Niño"
+    intensity: str = "Moderate to Strong El Niño conditions observed across the Pacific Equatorial zone."
+    description: str = "Moderate to Strong El Niño conditions observed across the Pacific Equatorial zone."
     current_temp: float = 32.7
     humidity: float = 63.0
     wind_speed: float = 12.4
     pressure: float = 1008.0
     sea_surface_temp: float = 29.1
-    sea_surface_anomaly: str = "Above Normal"
-    outlook: str = "El Niño conditions are likely to persist in the coming months, which may increase thermal stress on power grid infrastructure."
+    sea_surface_anomaly: str = "+1.4°C"
+    oni: float = 1.4
+    period: str = "2026-01 (DJF)"
+    source: str = "NOAA Climate Prediction Center (CPC) Oceanic Niño Index (ONI) Dataset"
+    outlook: str = "El Niño conditions provide environmental context for the transformer monitoring period."

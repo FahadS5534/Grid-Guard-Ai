@@ -33,7 +33,7 @@ export default function ElNinoMonitor() {
       })
       .catch(err => {
         console.error('Failed to load environment summary:', err);
-        setError(err.message || 'Unable to load environment data.');
+        setError('ONI dataset is currently unavailable. Unable to connect to the environmental-data service.');
         setLoading(false);
       });
   }, [selectedTransformer]);
@@ -62,7 +62,7 @@ export default function ElNinoMonitor() {
         />
         <div className="gridguard-card p-6 border-l-4 border-red-500 bg-red-950/20 text-slate-200">
           <h3 className="text-base font-bold text-red-400 mb-1">Environment Data Unavailable</h3>
-          <p className="text-xs text-slate-400">{error || 'Unable to connect to environmental service.'}</p>
+          <p className="text-xs text-slate-400">ONI dataset is currently unavailable. Unable to connect to the environmental-data service.</p>
         </div>
       </div>
     );

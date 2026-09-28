@@ -45,14 +45,17 @@ class WeatherService:
 
     @staticmethod
     def get_enso_summary() -> Dict[str, Any]:
+        desc = "Moderate to Strong El Niño conditions observed across the Pacific Equatorial zone."
         return {
             "status": "Active El Niño",
-            "intensity": "Moderate to Strong El Niño conditions observed across the Pacific Equatorial zone.",
+            "intensity": desc,
+            "description": desc,
             "sea_surface_temp": 29.1,
             "sea_surface_anomaly": "Above Normal (+1.4°C)",
             "oni": 1.4,
             "nino34": 28.8,
-            "period": "DJF 2025/2026",
+            "period": "2026-01 (DJF)",
+            "source": "NOAA Climate Prediction Center (CPC) Oceanic Niño Index (ONI) Dataset",
             "outlook": "El Niño conditions provide environmental thermal context that may elevate regional ambient temperatures around transformer infrastructure.",
             "disclaimer": "El Niño/ONI dataset values provide environmental context for the monitoring period. ONI is NOT an input feature to the frozen LSTM anomaly model.",
             "updated_at": datetime.utcnow().strftime("%Y-%m-%d")
