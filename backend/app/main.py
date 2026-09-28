@@ -6,7 +6,7 @@ from app.core.database import Base, engine
 from app.api.routes import (
     auth, transformers, telemetry, dashboard,
     environment, thermal_stress, anomaly, maintenance,
-    alerts, reports, simulator, ws
+    alerts, reports, simulator, simulation, ws
 )
 from seed import seed_db
 
@@ -60,6 +60,7 @@ app.include_router(maintenance.router, prefix=api_prefix)
 app.include_router(alerts.router, prefix=api_prefix)
 app.include_router(reports.router, prefix=api_prefix)
 app.include_router(simulator.router, prefix=api_prefix)
+app.include_router(simulation.router, prefix=api_prefix)
 app.include_router(ws.router)
 
 @app.get("/")

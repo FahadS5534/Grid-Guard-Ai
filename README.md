@@ -72,41 +72,73 @@
 
 ---
 
-## 🔌 IoT Data Flow & Architecture
+## 🔌 System Workflow & Architecture Diagram
 
-```mermaid
-flowchart TD
-    subgraph IoT Hardware / Acquisition Layer
-        A[DS18B20 Temp Sensor] --> ESP32[ESP32 NodeMCU Microcontroller]
-        B[SW-420 Vibration Sensor] --> ESP32
-        C[ACS712 Current Sensor] --> ESP32
-        D[Voltage Sensor] --> ESP32
-        E[DHT22 Humidity Sensor] --> ESP32
-    end
-
-    subgraph Backend Ingestion & Processing
-        ESP32 -- "Wi-Fi HTTP POST /api/v1/telemetry" --> FASTAPI[FastAPI Backend Server]
-        FASTAPI --> DB[(SQLite / PostgreSQL Database)]
-        FASTAPI --> STRESS[Thermal Stress Engine]
-    end
-
-    subgraph AI Anomaly Detection Pipeline
-        FASTAPI --> BASELINE[Seasonal Temp Baseline Normalization]
-        BASELINE --> WIN[96-Step Sliding Window Assembly]
-        WIN --> SCALER[Joblib MinMax Scaler]
-        SCALER --> MODEL[Frozen LSTM Autoencoder Model]
-        MODEL --> RECON[Reconstruction Error Calculation]
-        RECON --> EVAL[Threshold & Health Score Evaluation]
-    end
-
-    subgraph Presentation & Operations
-        EVAL --> WS[WebSocket Real-Time Broadcast]
-        EVAL --> RULE[Predictive Maintenance Engine]
-        WS --> UI[React 19 Operations Dashboard]
-        RULE --> ALERTS[Alert & Notification System]
-        ALERTS --> UI
-    end
 ```
+                ESP32 IoT
+                    |
+                    v
+              FastAPI Backend
+                    |
+          +---------+---------+
+          |                   |
+          v                   v
+    Transformer Data      ONI / El Niño
+          |                Dataset
+          v                   |
+ Temperature Deviation        |
+ Current                      |
+ Voltage                      |
+          |                   |
+          v                   |
+   Frozen LSTM AI             |
+          |                   |
+          +---------+---------+
+                    |
+                    v
+             Decision Support
+                    |
+          +---------+---------+
+          |                   |
+          v                   v
+     Anomaly/Risk       Environmental
+       Detection          Context
+          |                   |
+          +---------+---------+
+                    |
+                    v
+             Recommendations
+```
+
+> **Important Data Isolation Note**:  
+> The El Niño/ONI dataset is used as environmental context and visualization. It is **not** an input feature of the frozen LSTM model.
+
+---
+
+## 🔄 End-to-End System Workflow
+
+1. **Real IoT Monitoring / Data Ingestion**:
+   - Physical ESP32 sensors or simulator send multi-parameter telemetry (`temperature`, `current`, `voltage`, `humidity`, `vibration`) to FastAPI ingestion endpoints.
+2. **Simulation / Data Injection Mode**:
+   - Users can test predictive maintenance without physical hardware using manual telemetry injection, 96-step scenario sequence generators, or CSV sequence uploads.
+3. **Seasonal Temperature Baseline Normalization**:
+   - `temperature_deviation` is computed dynamically: `temperature_deviation = actual_temperature - expected_monthly_temperature` using the saved seasonal baseline (`final_seasonal_temperature_baseline.json`).
+4. **96-Step (24-Hour) Time-Series Windowing**:
+   - Inference requires a rolling sequence of 96 consecutive observations at 15-minute intervals (24 hours).
+5. **Frozen LSTM Autoencoder**:
+   - The sequence vector `[temperature_deviation, current, voltage]` is scaled using `final_scaler.joblib` and processed by the frozen model (`final_lstm_autoencoder.keras`).
+6. **Reconstruction Error Calculation**:
+   - Feature-wise and overall Mean Squared Error (MSE) is computed between input sequence and reconstructed output.
+7. **Anomaly Detection & Score**:
+   - Reconstruction error is compared against the frozen threshold (`0.243166`).
+8. **Health & Risk Score Assignment**:
+   - Health score ($0-100\%$) and risk levels (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) are calculated.
+9. **El Niño / ONI Environmental Context**:
+   - Regional Oceanic Niño Index (ONI) dataset is monitored in parallel to provide ambient climate context.
+10. **Maintenance Decision Support**:
+    - The rule-based recommendation engine combines AI anomaly results and environmental context to suggest actionable maintenance precautions.
+
+---
 
 ### Feature Isolation Principle
 The system captures 5 physical IoT telemetry metrics:

@@ -2,8 +2,9 @@ from typing import Dict, Any, List
 
 class MaintenanceRecommendationService:
     """
-    Rule-based predictive maintenance recommendation engine.
-    Analyzes telemetry, thermal stress, AI anomaly results, and environmental conditions.
+    Rule-based predictive maintenance decision-support recommendation engine.
+    Analyzes telemetry, thermal stress, AI anomaly reconstruction results, and environmental conditions.
+    Provides operator recommendations with explicit rationale breakdown.
     """
 
     @staticmethod
@@ -12,61 +13,78 @@ class MaintenanceRecommendationService:
         thermal_stress: float,
         is_anomaly: bool,
         health_score: float,
+        reconstruction_error: float = 0.08,
+        threshold: float = 0.2432,
+        dominant_signal: str = "Temperature Deviation",
         enso_active: bool = True
     ) -> Dict[str, Any]:
         temp = sensor_data.get("temperature", 68.4)
         vibration = sensor_data.get("vibration", 2.35)
         current = sensor_data.get("current", 156.8)
+        voltage = sensor_data.get("voltage", 230.0)
         ambient = sensor_data.get("ambient_temperature", 32.7)
 
         recommended_actions = []
         reasons = []
 
-        # Rule 1: High Temperature & Thermal Stress
+        # 1. Evaluate Anomaly Rationale
+        if is_anomaly or reconstruction_error >= threshold:
+            reasons.append(f"AI reconstruction error ({reconstruction_error:.4f}) exceeded frozen decision threshold ({threshold:.4f}).")
+            reasons.append(f"Dominant reconstruction anomaly detected in: {dominant_signal}.")
+        
         if temp >= 65.0 or thermal_stress >= 0.67:
-            recommended_actions.append("Inspect cooling system")
-            reasons.append("High transformer temperature")
+            reasons.append(f"Elevated transformer operating temperature ({temp}°C) causing high thermal stress index ({thermal_stress:.2f}).")
+            recommended_actions.append("Inspect transformer thermal and cooling conditions (fans/radiators).")
 
-        # Rule 2: Vibration & Mechanical condition
-        if vibration >= 2.0:
-            recommended_actions.append("Check transformer oil condition")
-            reasons.append("Increased vibration level")
-
-        # Rule 3: Current & Load
         if current >= 150.0:
-            recommended_actions.append("Verify load balancing")
+            reasons.append(f"High load current ({current} A) detected on primary phase.")
+            recommended_actions.append("Review load balancing and current feeder distribution.")
 
-        # Rule 4: El Niño & Environmental Heatwave
-        if ambient >= 32.0 or enso_active:
-            recommended_actions.append("Monitor temperature closely")
-            if enso_active and thermal_stress >= 0.6:
-                reasons.append("High thermal stress due to El Niño conditions")
+        if abs(voltage - 230.0) >= 15.0:
+            reasons.append(f"Voltage fluctuation ({voltage} V) deviating from nominal 230V reference.")
+            recommended_actions.append("Verify tap-changer operation and busbar voltage stability.")
 
-        # Ensure fallback actions if all normal
-        if not recommended_actions:
-            recommended_actions = [
-                "Continue standard routine inspection schedule",
-                "Verify sensor calibration"
-            ]
-            reasons = ["All parameters are within normal baseline ranges."]
+        if enso_active:
+            reasons.append("Environmental Context: Active El Niño heatwave conditions elevate ambient temperature baseline.")
 
-        # Calculate Risk Score (0 - 100%)
-        risk_score = round(min(98.0, max(12.0, 100.0 - health_score + (thermal_stress * 30.0))), 0)
-
-        if risk_score >= 75.0 or is_anomaly:
+        # Determine Risk Category
+        if health_score < 30.0 or reconstruction_error >= threshold * 2.0:
+            risk_category = "CRITICAL"
+            risk_level = "Critical Risk"
+            timeframe = "Immediate (Within 24 Hours)"
+            if not recommended_actions:
+                recommended_actions.append("Escalate for immediate engineering assessment and thermal inspection.")
+            recommended_actions.append("Follow established grid safety and emergency load-shedding procedures if required.")
+        elif is_anomaly or health_score < 60.0 or thermal_stress >= 0.70:
+            risk_category = "HIGH"
             risk_level = "High Risk"
             timeframe = "Within 3 Days"
-        elif risk_score >= 45.0:
-            risk_level = "Moderate Risk"
+            recommended_actions.append("Schedule preventive physical inspection of cooling system and transformer oil condition.")
+            recommended_actions.append("Check for persistent thermal and electrical pattern abnormalities.")
+        elif health_score < 80.0 or thermal_stress >= 0.40:
+            risk_category = "MEDIUM"
+            risk_level = "Medium Risk"
             timeframe = "Within 7 Days"
+            recommended_actions.append("Increase telemetry monitoring frequency.")
+            recommended_actions.append("Review 24-hour temperature and load current trends.")
         else:
-            risk_level = "Low Risk"
+            risk_category = "LOW"
+            risk_level = "Low Risk / Normal"
             timeframe = "Routine (Next 30 Days)"
+            recommended_actions = [
+                "Continue standard routine telemetry monitoring.",
+                "Maintain scheduled periodic maintenance checklist."
+            ]
+            reasons = ["Transformer parameters and LSTM reconstruction error remain within nominal baseline limits."]
+
+        risk_score = round(min(100.0, max(0.0, 100.0 - health_score)), 0)
 
         return {
+            "risk_category": risk_category,
             "risk_level": risk_level,
             "risk_score": risk_score,
             "recommended_actions": recommended_actions,
             "reasons": reasons,
-            "suggested_timeframe": timeframe
+            "suggested_timeframe": timeframe,
+            "disclaimer": "Recommendations provide operational decision support for human maintenance teams. They do not constitute automatic proof of physical hardware failure."
         }

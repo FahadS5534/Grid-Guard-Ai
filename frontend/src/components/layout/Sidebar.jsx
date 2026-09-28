@@ -8,6 +8,7 @@ import {
   Thermometer, 
   Cpu, 
   Wrench, 
+  FlaskConical,
   BellRing,
   LogOut,
   Shield,
@@ -23,6 +24,7 @@ const navItems = [
   { name: 'Thermal Stress', path: '/thermal-stress', icon: Thermometer },
   { name: 'AI Anomaly Detection', path: '/ai-anomaly-detection', icon: Cpu },
   { name: 'Predictive Maintenance', path: '/predictive-maintenance', icon: Wrench },
+  { name: 'Data Simulation', path: '/simulation', icon: FlaskConical },
   { name: 'Alerts & Reports', path: '/alerts-reports', icon: BellRing },
 ];
 

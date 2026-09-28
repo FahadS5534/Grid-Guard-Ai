@@ -28,16 +28,22 @@ async def get_current_environment():
 def get_enso_status():
     return WeatherService.get_enso_summary()
 
+@router.get("/oni")
+def get_oni_latest():
+    return WeatherService.get_enso_summary()
+
+@router.get("/oni/history")
+def get_oni_history():
+    return {
+        "summary": WeatherService.get_enso_summary(),
+        "oni_history": WeatherService.get_oni_dataset_history(),
+        "sea_surface_temperature_trend": WeatherService.get_sea_surface_temp_history()
+    }
+
 @router.get("/history")
 def get_environment_history():
     return {
-        "sea_surface_temperature_trend": WeatherService.get_sea_surface_temp_history(),
-        "enso_index_history": [
-            {"month": "Dec", "oni": 1.1},
-            {"month": "Jan", "oni": 1.2},
-            {"month": "Feb", "oni": 1.3},
-            {"month": "Mar", "oni": 1.4},
-            {"month": "Apr", "oni": 1.4},
-            {"month": "May", "oni": 1.4},
-        ]
+        "summary": WeatherService.get_enso_summary(),
+        "oni_history": WeatherService.get_oni_dataset_history(),
+        "sea_surface_temperature_trend": WeatherService.get_sea_surface_temp_history()
     }

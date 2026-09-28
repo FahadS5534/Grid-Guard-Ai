@@ -76,7 +76,31 @@ export const api = {
   getDownloadUrl: (reportId) => `${API_BASE_URL}/reports/${reportId}/download`,
   getStandardDownloadUrl: (type) => `${API_BASE_URL}/reports/${type}/download`,
 
-  // Dev Simulator
+  // Dev Simulator & Simulation Engine
   triggerSimulateTick: (transformerId = 'TX-101') => 
     fetchJson(`/dev/simulate?transformer_id=${transformerId}`, { method: 'POST' }),
+
+  // Data Simulation Mode (Part 1, 2, 9)
+  injectSimulationData: (payload) => fetchJson('/simulation/inject', { method: 'POST', body: JSON.stringify(payload) }),
+  runScenarioSequence: (payload) => fetchJson('/simulation/sequence', { method: 'POST', body: JSON.stringify(payload) }),
+  uploadSimulationCsv: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = localStorage.getItem('gridguard_token');
+    const response = await fetch(`${API_BASE_URL}/simulation/csv-upload`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || err.error?.message || 'CSV Upload failed');
+    }
+    return response.json();
+  },
+
+  // ONI Climate Dataset (Part 4)
+  getOniHistory: () => fetchJson('/environment/oni/history'),
 };
