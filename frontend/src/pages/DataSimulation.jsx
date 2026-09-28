@@ -79,7 +79,7 @@ export default function DataSimulation() {
         notice: res.notice,
         observation_count: res.observation_count,
         required_count: res.required_count || 96,
-        missing_count: res.missing_count || max(0, 96 - res.observation_count),
+        missing_count: res.missing_count || Math.max(0, 96 - res.observation_count),
         is_complete_sequence: res.is_complete_sequence,
         ml: res.ml_result,
         rec: res.recommendation,

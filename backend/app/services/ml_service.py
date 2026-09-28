@@ -140,6 +140,7 @@ class RealMLInferenceService(BaseMLInferenceService):
         return float(self.monthly_medians.get(m_str, self.overall_median_temp))
 
     def _calculate_scores(self, reconstruction_error: float) -> Dict[str, Any]:
+        import builtins
         threshold = float(self.threshold)
         is_anomaly = reconstruction_error > threshold
         ratio = float(reconstruction_error / threshold) if threshold > 0 else 0.0
@@ -154,13 +155,13 @@ class RealMLInferenceService(BaseMLInferenceService):
         else:
             if ratio < 1.60:
                 risk = "HIGH"
-                anomaly_score = 0.40 + min(0.30, (ratio - 1.0) * 0.50)
+                anomaly_score = 0.40 + builtins.min(0.30, (ratio - 1.0) * 0.50)
             else:
                 risk = "CRITICAL"
-                anomaly_score = min(1.0, 0.70 + (ratio - 1.60) * 0.30)
+                anomaly_score = builtins.min(1.0, 0.70 + (ratio - 1.60) * 0.30)
 
-        anomaly_score = float(min(1.0, max(0.0, anomaly_score)))
-        health_score = float(min(100.0, max(0.0, 100.0 * (1.0 - anomaly_score))))
+        anomaly_score = float(builtins.min(1.0, builtins.max(0.0, anomaly_score)))
+        health_score = float(builtins.min(100.0, builtins.max(0.0, 100.0 * (1.0 - anomaly_score))))
         status = "ANOMALY DETECTED" if is_anomaly else "NORMAL"
 
         return {
