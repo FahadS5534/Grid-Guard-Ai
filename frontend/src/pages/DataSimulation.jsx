@@ -15,7 +15,9 @@ import {
   Droplet,
   Info,
   Clock,
-  Layers
+  Layers,
+  Database,
+  Loader2
 } from 'lucide-react';
 import { useTransformer } from '../context/TransformerContext';
 import { api } from '../services/api';
@@ -34,7 +36,7 @@ export default function DataSimulation() {
   });
 
   // Selected Scenario
-  const [scenario, setScenario] = useState('normal');
+  const [scenario, setScenario] = useState('verified_normal');
 
   // Response State
   const [result, setResult] = useState(null);
@@ -76,6 +78,9 @@ export default function DataSimulation() {
         data_mode: 'SIMULATED DATA (SINGLE INJECTION)',
         notice: res.notice,
         observation_count: res.observation_count,
+        required_count: res.required_count || 96,
+        missing_count: res.missing_count || max(0, 96 - res.observation_count),
+        is_complete_sequence: res.is_complete_sequence,
         ml: res.ml_result,
         rec: res.recommendation,
         raw: res.latest_injected
@@ -103,9 +108,12 @@ export default function DataSimulation() {
         base_vibration: form.vibration
       });
       setResult({
-        data_mode: 'SIMULATED SCENARIO (96-STEP SEQUENCE)',
+        data_mode: res.data_mode || 'SIMULATED SCENARIO (96-STEP SEQUENCE)',
         notice: res.notice,
         observation_count: res.observation_count,
+        required_count: res.required_count || 96,
+        missing_count: res.missing_count || 0,
+        is_complete_sequence: res.is_complete_sequence,
         window_start: res.window_start,
         window_end: res.window_end,
         sequence: res.sequence,
@@ -133,6 +141,9 @@ export default function DataSimulation() {
         data_mode: 'SIMULATED CSV UPLOAD (96-STEP SEQUENCE)',
         notice: res.notice,
         observation_count: res.observation_count,
+        required_count: res.required_count || 96,
+        missing_count: res.missing_count || 0,
+        is_complete_sequence: res.is_complete_sequence,
         ml: res.ml_result,
         rec: res.recommendation,
         raw: res.ml_result.raw_features
@@ -147,6 +158,7 @@ export default function DataSimulation() {
   const ml = result ? result.ml : null;
   const rec = result ? result.rec : null;
   const isAnomaly = ml ? ml.is_anomaly : false;
+  const isComplete = result ? (result.is_complete_sequence !== false && result.observation_count >= 96) : false;
 
   return (
     <div className="space-y-6">
@@ -210,13 +222,27 @@ export default function DataSimulation() {
           {activeTab === 'scenarios' && (
             <div className="gridguard-card p-5 space-y-3">
               <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Demo Scenarios (96 Steps)</h4>
+
+              <button
+                onClick={() => handleRunScenario('verified_normal')}
+                className={`w-full p-3 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${scenario === 'verified_normal' && result ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-300' : 'bg-[#0B0F17] border-slate-800 text-slate-300 hover:border-slate-700'}`}
+              >
+                <div>
+                  <span className="font-bold block text-sm text-cyan-400 flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5" />
+                    Verified Normal (Dataset)
+                  </span>
+                  <span className="text-[11px] text-slate-400">Actual 96-step normal sequence from transformer test dataset</span>
+                </div>
+                <Play className="w-4 h-4 text-cyan-400 shrink-0" />
+              </button>
               
               <button
                 onClick={() => handleRunScenario('normal')}
                 className={`w-full p-3 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${scenario === 'normal' && result ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300' : 'bg-[#0B0F17] border-slate-800 text-slate-300 hover:border-slate-700'}`}
               >
                 <div>
-                  <span className="font-bold block text-sm text-emerald-400">Scenario 1 — Normal State</span>
+                  <span className="font-bold block text-sm text-emerald-400">Scenario 1 — Nominal Normal</span>
                   <span className="text-[11px] text-slate-400">Nominal temp dev, current (156A), voltage (230V)</span>
                 </div>
                 <Play className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -361,7 +387,7 @@ export default function DataSimulation() {
           {loading && (
             <div className="gridguard-card p-12 text-center animate-pulse">
               <FlaskConical className="w-10 h-10 text-purple-400 animate-spin mx-auto mb-3" />
-              <p className="text-sm font-bold text-white">Running Frozen LSTM Autoencoder Inference...</p>
+              <p className="text-sm font-bold text-white">Evaluating 96-Observation Time-Series Sequence...</p>
               <p className="text-xs text-slate-400 mt-1">Applying seasonal baseline, scaling 96-step sequence, computing reconstruction error</p>
             </div>
           )}
@@ -397,117 +423,164 @@ export default function DataSimulation() {
                   {result.data_mode}
                 </span>
                 <span className="text-slate-400">
-                  Observation Window: <span className="font-bold text-slate-200">{result.observation_count} / 96 steps</span>
+                  Sequence Window: <span className="font-bold text-slate-200">{result.observation_count} / 96 observations</span>
                 </span>
               </div>
 
-              {/* SECTION 1: AI Anomaly Detection Result */}
-              <div className="gridguard-card p-6 space-y-5">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <FlaskConical className="w-4 h-4 text-purple-400" />
-                    AI Anomaly Detection Result
-                  </h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${isAnomaly ? 'bg-red-500 text-white glow-red' : 'bg-emerald-500 text-white'}`}>
-                    {ml.status}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                  <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
-                    <span className="text-[11px] text-slate-400 font-medium block">Reconstruction Error</span>
-                    <span className="text-2xl font-black text-white mt-1 block">{ml.reconstruction_error}</span>
-                    <span className="text-[10px] text-slate-400">Threshold: {ml.threshold}</span>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
-                    <span className="text-[11px] text-slate-400 font-medium block">Anomaly Score</span>
-                    <span className="text-2xl font-black text-purple-400 mt-1 block">{ml.anomaly_score}</span>
-                    <span className="text-[10px] text-slate-400">Scale 0.00 – 1.00</span>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
-                    <span className="text-[11px] text-slate-400 font-medium block">Health Score</span>
-                    <span className="text-2xl font-black text-emerald-400 mt-1 block">{ml.health_score}%</span>
-                    <span className="text-[10px] text-slate-400">100 × (1 - Anomaly)</span>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
-                    <span className="text-[11px] text-slate-400 font-medium block">Risk Level</span>
-                    <span className={`text-2xl font-black mt-1 block ${ml.risk_category === 'HIGH' || ml.risk_category === 'CRITICAL' ? 'text-red-500' : ml.risk_category === 'MEDIUM' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                      {ml.risk_category}
+              {/* INCOMPLETE SEQUENCE STATE (< 96 observations) */}
+              {!isComplete && (
+                <div className="gridguard-card p-6 border-l-4 border-amber-500 bg-amber-950/20 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-amber-300 flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-amber-400" />
+                        Collecting Observations: {result.observation_count} / 96
+                      </h3>
+                      <p className="text-sm font-semibold text-white mt-1">
+                        {result.missing_count} more observations required to run 24-hour AI inference.
+                      </p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      IN PROGRESS
                     </span>
-                    <span className="text-[10px] text-slate-400">Category</span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-slate-400">
+                      <span>Accumulation Progress</span>
+                      <span className="font-bold text-amber-300">{Math.round((result.observation_count / 96) * 100)}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-300"
+                        style={{ width: `${(result.observation_count / 96) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed bg-[#0B0F17] p-3 rounded border border-slate-800">
+                    {result.notice || result.ml?.notice}
+                  </p>
+
+                  <div className="text-[11px] text-slate-400 italic">
+                    Note: To evaluate full sequence anomaly status, continue injecting telemetry points until 96 steps are accumulated, or select a predefined 96-step demo scenario on the left.
                   </div>
                 </div>
+              )}
 
-                {/* Dominant Reconstruction Signal */}
-                <div className="p-3.5 rounded-lg bg-[#0B0F17] border border-slate-800 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Dominant Reconstruction Signal:</span>
-                  <span className="font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/30">
-                    {ml.dominant_signal || 'Temperature Deviation'}
-                  </span>
-                </div>
+              {/* COMPLETE 96-STEP SEQUENCE STATE (96/96 observations) */}
+              {isComplete && (
+                <>
+                  {/* SECTION 1: AI Anomaly Detection Result */}
+                  <div className="gridguard-card p-6 space-y-5">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <FlaskConical className="w-4 h-4 text-purple-400" />
+                        AI Anomaly Detection Result
+                      </h3>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${isAnomaly ? 'bg-red-500 text-white glow-red' : 'bg-emerald-500 text-white'}`}>
+                        {ml.status}
+                      </span>
+                    </div>
 
-                {/* Explanation */}
-                <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800 text-xs leading-relaxed text-slate-300">
-                  <p className="font-bold text-slate-200 mb-1">Inference Explanation:</p>
-                  {ml.explanation}
-                </div>
-
-                {/* Clarification Note */}
-                <div className="flex items-center gap-2 text-[11px] text-slate-400 italic">
-                  <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span>
-                    Note: Anomaly classification comes strictly from the frozen LSTM Autoencoder sequence reconstruction error exceeding threshold ({ml.threshold}), not from raw individual values.
-                  </span>
-                </div>
-              </div>
-
-              {/* SECTION 2: Predictive Maintenance Precautions & Operator Support */}
-              <div className="gridguard-card p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-emerald-400" />
-                    Operator Decision Support & Precautions
-                  </h3>
-                  <span className="text-xs text-purple-300 font-semibold">{rec.risk_level}</span>
-                </div>
-
-                {/* Why Recommendation Was Given (Rationale) */}
-                <div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Rationale Breakdown:</h4>
-                  <ul className="space-y-2">
-                    {rec.reasons.map((r, i) => (
-                      <li key={i} className="flex items-center gap-2 text-xs text-slate-300 bg-[#0B0F17] p-2.5 rounded border border-slate-800">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span>
-                        <span>{r}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Recommended Actions */}
-                <div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Recommended Operator Precautions:</h4>
-                  <div className="space-y-2">
-                    {rec.recommended_actions.map((act, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-[#0B0F17] border border-slate-800 text-xs">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span className="font-semibold text-white">{act}</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                      <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
+                        <span className="text-[11px] text-slate-400 font-medium block">Reconstruction Error</span>
+                        <span className="text-2xl font-black text-white mt-1 block">{ml.reconstruction_error}</span>
+                        <span className="text-[10px] text-slate-400">Threshold: {ml.threshold}</span>
                       </div>
-                    ))}
+
+                      <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
+                        <span className="text-[11px] text-slate-400 font-medium block">Threshold Error Ratio</span>
+                        <span className="text-2xl font-black text-cyan-400 mt-1 block">{ml.threshold_ratio ?? (ml.reconstruction_error / ml.threshold).toFixed(4)}</span>
+                        <span className="text-[10px] text-slate-400">Error / Threshold</span>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
+                        <span className="text-[11px] text-slate-400 font-medium block">Health Score</span>
+                        <span className="text-2xl font-black text-emerald-400 mt-1 block">{ml.health_score}%</span>
+                        <span className="text-[10px] text-slate-400">100 × (1 - Anomaly)</span>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800">
+                        <span className="text-[11px] text-slate-400 font-medium block">Risk Level</span>
+                        <span className={`text-2xl font-black mt-1 block ${ml.risk_category === 'HIGH' || ml.risk_category === 'CRITICAL' ? 'text-red-500' : ml.risk_category === 'MEDIUM' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {ml.risk_category}
+                        </span>
+                        <span className="text-[10px] text-slate-400">Category</span>
+                      </div>
+                    </div>
+
+                    {/* Dominant Reconstruction Signal */}
+                    <div className="p-3.5 rounded-lg bg-[#0B0F17] border border-slate-800 flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Dominant Reconstruction Signal:</span>
+                      <span className="font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/30">
+                        {ml.dominant_signal || 'Temperature Deviation'}
+                      </span>
+                    </div>
+
+                    {/* Explanation */}
+                    <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800 text-xs leading-relaxed text-slate-300">
+                      <p className="font-bold text-slate-200 mb-1">Inference Explanation:</p>
+                      {ml.explanation}
+                    </div>
+
+                    {/* Clarification Note */}
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 italic">
+                      <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>
+                        Note: Anomaly classification comes strictly from the frozen LSTM Autoencoder sequence reconstruction error exceeding threshold ({ml.threshold}), not from raw individual values.
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="pt-2 flex items-center justify-between text-xs text-slate-400">
-                  <span>Suggested Timeframe: <span className="font-bold text-purple-300">{rec.suggested_timeframe}</span></span>
-                </div>
+                  {/* SECTION 2: Predictive Maintenance Precautions & Operator Support */}
+                  <div className="gridguard-card p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-emerald-400" />
+                        Operator Decision Support & Precautions
+                      </h3>
+                      <span className="text-xs text-purple-300 font-semibold">{rec.risk_level}</span>
+                    </div>
 
-                <div className="p-3 rounded bg-emerald-950/20 border border-emerald-500/30 text-[11px] text-emerald-300">
-                  {rec.disclaimer || 'Recommendations provide operational decision support for human maintenance teams.'}
-                </div>
-              </div>
+                    {/* Why Recommendation Was Given (Rationale) */}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Rationale Breakdown:</h4>
+                      <ul className="space-y-2">
+                        {rec.reasons.map((r, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs text-slate-300 bg-[#0B0F17] p-2.5 rounded border border-slate-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Recommended Actions */}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Recommended Operator Precautions:</h4>
+                      <div className="space-y-2">
+                        {rec.recommended_actions.map((act, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-[#0B0F17] border border-slate-800 text-xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="font-semibold text-white">{act}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between text-xs text-slate-400">
+                      <span>Suggested Timeframe: <span className="font-bold text-purple-300">{rec.suggested_timeframe}</span></span>
+                    </div>
+
+                    <div className="p-3 rounded bg-emerald-950/20 border border-emerald-500/30 text-[11px] text-emerald-300">
+                      {rec.disclaimer || 'Recommendations provide operational decision support for human maintenance teams.'}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -515,3 +588,4 @@ export default function DataSimulation() {
     </div>
   );
 }
+

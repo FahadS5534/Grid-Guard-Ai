@@ -139,6 +139,39 @@ class RealMLInferenceService(BaseMLInferenceService):
         m_str = str(current_time.month)
         return float(self.monthly_medians.get(m_str, self.overall_median_temp))
 
+    def _calculate_scores(self, reconstruction_error: float) -> Dict[str, Any]:
+        threshold = float(self.threshold)
+        is_anomaly = reconstruction_error > threshold
+        ratio = float(reconstruction_error / threshold) if threshold > 0 else 0.0
+
+        if not is_anomaly:
+            if ratio < 0.70:
+                risk = "LOW"
+                anomaly_score = ratio * 0.35
+            else:
+                risk = "MEDIUM"
+                anomaly_score = 0.25 + (ratio - 0.70) * 0.50
+        else:
+            if ratio < 1.60:
+                risk = "HIGH"
+                anomaly_score = 0.40 + min(0.30, (ratio - 1.0) * 0.50)
+            else:
+                risk = "CRITICAL"
+                anomaly_score = min(1.0, 0.70 + (ratio - 1.60) * 0.30)
+
+        anomaly_score = float(min(1.0, max(0.0, anomaly_score)))
+        health_score = float(min(100.0, max(0.0, 100.0 * (1.0 - anomaly_score))))
+        status = "ANOMALY DETECTED" if is_anomaly else "NORMAL"
+
+        return {
+            "is_anomaly": is_anomaly,
+            "status": status,
+            "threshold_ratio": round(ratio, 4),
+            "anomaly_score": round(anomaly_score, 4),
+            "health_score": round(health_score, 1),
+            "risk_category": risk
+        }
+
     def predict_sequence(self, sequence_observations: List[Dict[str, Any]], current_time: datetime = None) -> Dict[str, Any]:
         """
         Runs 24-hour / 96-observation time-series inference using the frozen LSTM Autoencoder.
@@ -196,35 +229,25 @@ class RealMLInferenceService(BaseMLInferenceService):
                 dominant_signal = feature_names[dominant_idx]
 
                 reconstruction_error = float(np.mean(mse_per_feature))
-                anomaly_score = float(min(1.0, max(0.0, reconstruction_error / self.threshold)))
-                is_anomaly = reconstruction_error >= self.threshold
-                health_score = float(min(100.0, max(0.0, 100.0 * (1.0 - anomaly_score))))
-
-                if anomaly_score < 0.20:
-                    risk = "LOW"
-                elif anomaly_score < 0.40:
-                    risk = "MEDIUM"
-                elif anomaly_score < 0.70:
-                    risk = "HIGH"
-                else:
-                    risk = "CRITICAL"
+                scores = self._calculate_scores(reconstruction_error)
 
                 return {
-                    "anomaly_score": round(anomaly_score, 4),
+                    "anomaly_score": scores["anomaly_score"],
                     "reconstruction_error": round(reconstruction_error, 4),
                     "threshold": round(self.threshold, 4),
-                    "is_anomaly": is_anomaly,
-                    "status": "ANOMALY DETECTED" if is_anomaly else "NORMAL",
-                    "health_score": round(health_score, 1),
-                    "risk_category": risk,
+                    "threshold_ratio": scores["threshold_ratio"],
+                    "is_anomaly": scores["is_anomaly"],
+                    "status": scores["status"],
+                    "health_score": scores["health_score"],
+                    "risk_category": scores["risk_category"],
                     "dominant_signal": dominant_signal,
                     "temperature_deviation": round(latest_dev, 2),
                     "observation_count": len(obs_list),
                     "explanation": (
                         f"24-Hour (96-step) LSTM Autoencoder sequence inference. Reconstruction Error: {reconstruction_error:.4f} "
-                        f"(Threshold: {self.threshold:.4f}). Dominant anomalous signal: {dominant_signal}."
-                        if is_anomaly
-                        else f"24-Hour (96-step) sequence features match learned normal baseline limits. Reconstruction Error: {reconstruction_error:.4f} (Threshold: {self.threshold:.4f})."
+                        f"(Threshold: {self.threshold:.4f}, Error Ratio: {scores['threshold_ratio']:.2f}). Dominant anomalous signal: {dominant_signal}."
+                        if scores["is_anomaly"]
+                        else f"24-Hour (96-step) sequence features match learned normal baseline limits. Reconstruction Error: {reconstruction_error:.4f} (Threshold: {self.threshold:.4f}, Error Ratio: {scores['threshold_ratio']:.2f})."
                     ),
                     "ml_mode": "production",
                     "model_type": "LSTM Autoencoder (final_lstm_autoencoder.keras)",
@@ -253,34 +276,24 @@ class RealMLInferenceService(BaseMLInferenceService):
             dominant_signal = "Voltage"
 
         reconstruction_error = round(0.0825 + (temp_stress * 0.25) + (curr_stress * 0.15) + (volt_stress * 0.10), 4)
-        is_anomaly = reconstruction_error >= self.threshold
-        anomaly_score = round(min(1.0, max(0.0, reconstruction_error / self.threshold)), 4)
-        health_score = round(max(0.0, min(100.0, 100.0 * (1.0 - anomaly_score))), 1)
-
-        if anomaly_score < 0.20:
-            risk = "LOW"
-        elif anomaly_score < 0.40:
-            risk = "MEDIUM"
-        elif anomaly_score < 0.70:
-            risk = "HIGH"
-        else:
-            risk = "CRITICAL"
+        scores = self._calculate_scores(reconstruction_error)
 
         explanation = (
             f"LSTM Autoencoder pipeline (Threshold={self.threshold:.4f}, Temp Dev={latest_dev:+.1f}°C) detected abnormal sequence error. "
             f"Dominant signal: {dominant_signal}."
-            if is_anomaly
+            if scores["is_anomaly"]
             else f"Transformer 96-step sequence features (Temp Dev={latest_dev:+.1f}°C) match normal baseline operational limits."
         )
 
         return {
-            "anomaly_score": anomaly_score,
+            "anomaly_score": scores["anomaly_score"],
             "reconstruction_error": reconstruction_error,
             "threshold": round(self.threshold, 4),
-            "is_anomaly": is_anomaly,
-            "status": "ANOMALY DETECTED" if is_anomaly else "NORMAL",
-            "health_score": health_score,
-            "risk_category": risk,
+            "threshold_ratio": scores["threshold_ratio"],
+            "is_anomaly": scores["is_anomaly"],
+            "status": scores["status"],
+            "health_score": scores["health_score"],
+            "risk_category": scores["risk_category"],
             "dominant_signal": dominant_signal,
             "temperature_deviation": round(latest_dev, 2),
             "observation_count": len(obs_list),
